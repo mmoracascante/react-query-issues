@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { IssueList } from '../components/IssueList';
 import { LabelPicker } from '../components/LabelPicker';
-import { useIssuesList } from '../../hooks/useIssuesList';
 import { LoadingIcon } from '../../share/components/LoadingIcon';
 import { State } from '../interfaces';
+import { useIssuesInfinite } from '../../hooks/useIssuesInfinite';
 
 
-export const ListView = () => {
+export const ListViewInfinite = () => {
 
 
   const [state, setState] = useState<State>()
   const [selectedLabels, setSelectedLabels] = useState<string[]>([])
 
-  const { queryIssues, page, nextPage, prevPage } = useIssuesList({ state, labels: selectedLabels })
+  const { issuesQuery } = useIssuesInfinite({ state, labels: selectedLabels })
 
   const onChangeLabel = (labelName: string) => {
     (selectedLabels.includes(labelName)
@@ -27,27 +27,21 @@ export const ListView = () => {
 
       <div className="col-8">
         {
-          queryIssues.isLoading
+          issuesQuery.isLoading
             ? (<LoadingIcon />)
             : (<IssueList
-              issues={queryIssues.data || []}
+              // useInfiniteQuery devuelve un arreglo de arreglos
+              // con el flat aplanamos todos los arreglos y queda uno solo
+              // asi arreglamos el error que se presentaba con typescript
+              issues={issuesQuery.data?.pages.flat() || []}
               state={state}
               onStateChange={(newState) => setState(newState)}
             />)
         }
-        <div className='d-flex mt-2 justify-content-between align-items-center'>
-          <button
-            onClick={prevPage}
-            disabled={queryIssues.isFetching}
-            className='btn btn-outline-primary'>Preview</button>
-
-          <span>{page}</span>
-
-          <button
-            disabled={queryIssues.isFetching}
-            onClick={nextPage}
-            className='btn btn-outline-primary'>Next</button>
-        </div>
+        {issuesQuery.isFetching ? 'Loading...' : <button
+          disabled={!issuesQuery.hasNextPage}
+          onClick={() => issuesQuery.fetchNextPage()}
+          className='btn btn-outline-primary mt-2'>Load more...</button>}
       </div>
 
       <div className="col-4">
